@@ -54,7 +54,7 @@ async function fetchSchemaFromExcel() {
             const sheets = context.workbook.worksheets;
             sheets.load("items/name");
             await context.sync();
-            
+
             const sheetItems = sheets.items;
             const rangeObjects = sheetItems.map(sheet => ({
                 name: sheet.name,
@@ -74,7 +74,7 @@ async function fetchSchemaFromExcel() {
 
             // Sync per caricare i valori di tutti i fogli popolati
             await context.sync();
-            
+
             currentSchema = [];
 
             activeRanges.forEach(obj => {
@@ -82,15 +82,15 @@ async function fetchSchemaFromExcel() {
                 const values = obj.range.values;
                 const sheetObj = { sheet: sheetName, categories: [] };
                 const is_4_39 = sheetName.includes('4.39');
-                
+
                 let current_level1 = null;
                 let current_level2 = null;
-                
+
                 if (is_4_39) {
-                    current_level1 = {name: 'ELETTRICI', code: '39', prefix: '4', subcategories: [], max_progressive: 0};
+                    current_level1 = { name: 'ELETTRICI', code: '39', prefix: '4', subcategories: [], max_progressive: 0 };
                     sheetObj.categories.push(current_level1);
                 }
-                
+
                 for (let rowIdx = 0; rowIdx < values.length; rowIdx++) {
                     const row = values[rowIdx];
                     const v0 = row[0] ? String(row[0]).trim() : "";
@@ -99,11 +99,11 @@ async function fetchSchemaFromExcel() {
                     const v3 = row.length > 3 && row[3] ? String(row[3]).trim() : "";
                     const v4 = row.length > 4 && row[4] ? String(row[4]).trim() : "";
                     const v5 = row.length > 5 && row[5] ? String(row[5]).trim() : "";
-                    
+
                     if (is_4_39) {
                         if (v1 && v2 && v2 !== 'nan' && v2 !== 'N. PZ') {
                             let c2 = v2.replace('.0', '').padStart(2, '0');
-                            current_level2 = {name: v1, code: c2, max_progressive: 0};
+                            current_level2 = { name: v1, code: c2, max_progressive: 0 };
                             current_level1.subcategories.push(current_level2);
                         }
                         if (v3) {
@@ -115,13 +115,13 @@ async function fetchSchemaFromExcel() {
                         if (v1 && v2 && v2 !== 'nan' && v2 !== 'N. PZ') {
                             let c1 = v2.replace('.0', '').padStart(2, '0');
                             let p = v0 ? v0.replace('.0', '').replace('.', '') : sheetName.split(' ')[0];
-                            current_level1 = {name: v1, code: c1, prefix: p, subcategories: [], max_progressive: 0};
+                            current_level1 = { name: v1, code: c1, prefix: p, subcategories: [], max_progressive: 0 };
                             sheetObj.categories.push(current_level1);
                             current_level2 = null;
                         }
                         if (v3 && v4 && v4 !== 'nan' && current_level1) {
                             let c2 = v4.replace('.0', '').padStart(2, '0');
-                            current_level2 = {name: v3, code: c2, max_progressive: 0};
+                            current_level2 = { name: v3, code: c2, max_progressive: 0 };
                             current_level1.subcategories.push(current_level2);
                         }
                         if (v5) {
@@ -131,7 +131,7 @@ async function fetchSchemaFromExcel() {
                         }
                     }
                 }
-                
+
                 if (sheetObj.categories.length > 0) currentSchema.push(sheetObj);
             });
 
@@ -254,7 +254,7 @@ generateBtn.addEventListener('click', async () => {
         alert('Seleziona almeno la Categoria Principale e il Livello 1.');
         return;
     }
-    
+
     const description = descriptionInput.value.trim().toUpperCase();
     if (!description) {
         alert('La descrizione è obbligatoria per inserire il codice.');
@@ -266,9 +266,9 @@ generateBtn.addEventListener('click', async () => {
     const lvl2Code = selectedLevel2 ? selectedLevel2.code : '00';
     let progVal = parseInt(progressiveInput.value) || 1;
     const progCode = progVal.toString().padStart(4, '0');
-    
+
     let finalCode = `${prefix}.${lvl1Code}.${lvl2Code}.${progCode} - ${description}`;
-    
+
     // UI Feedback: Disabilita pulsante
     const originalContent = generateBtn.innerHTML;
     generateBtn.disabled = true;
@@ -276,11 +276,11 @@ generateBtn.addEventListener('click', async () => {
 
     try {
         await insertCodeIntoExcel(selectedSheet.sheet, selectedLevel1.code, lvl2Code, finalCode);
-        
+
         // Successo
         if (selectedLevel2) selectedLevel2.max_progressive = progVal;
         else selectedLevel1.max_progressive = progVal;
-        
+
         // Aggiorna UI Risultato
         finalCodeEl.textContent = finalCode;
         codeBreakdownEl.innerHTML = `
@@ -291,7 +291,7 @@ generateBtn.addEventListener('click', async () => {
         `;
         resultCard.style.display = 'block';
         resultCard.classList.add('success-border');
-        
+
         // Storia
         const codeOnly = finalCode.split(' - ')[0];
         let history = JSON.parse(localStorage.getItem('mz_code_history') || '[]');
@@ -302,10 +302,10 @@ generateBtn.addEventListener('click', async () => {
         // Reset campi
         progressiveInput.value = progVal + 1;
         descriptionInput.value = '';
-        
+
         generateBtn.innerHTML = '<i class="fa-solid fa-check"></i> Inserito con Successo!';
         generateBtn.classList.add('btn-success');
-        
+
         setTimeout(() => {
             generateBtn.disabled = false;
             generateBtn.innerHTML = originalContent;
@@ -326,15 +326,15 @@ async function insertCodeIntoExcel(sheetName, level1Code, level2Code, newCodeStr
         const usedRange = sheet.getUsedRange();
         usedRange.load(["values", "rowIndex"]);
         await context.sync();
-        
+
         const values = usedRange.values;
         const startRowIdx = usedRange.rowIndex;
         const is_4_39 = sheetName.includes('4.39');
-        
+
         let target_l1_found = false;
         let target_l2_found = false;
         let last_item_row_idx = -1;
-        
+
         for (let i = 0; i < values.length; i++) {
             const row = values[i];
             const v1 = row[1] ? String(row[1]).trim() : "";
@@ -342,7 +342,7 @@ async function insertCodeIntoExcel(sheetName, level1Code, level2Code, newCodeStr
             const v3 = row.length > 3 && row[3] ? String(row[3]).trim() : "";
             const v4 = row.length > 4 && row[4] ? String(row[4]).trim() : "";
             const v5 = row.length > 5 && row[5] ? String(row[5]).trim() : "";
-            
+
             if (is_4_39) {
                 target_l1_found = true;
                 if (v1 && v2 && v2 !== 'N. PZ') {
@@ -368,20 +368,20 @@ async function insertCodeIntoExcel(sheetName, level1Code, level2Code, newCodeStr
                 if (target_l1_found && !target_l2_found && level2Code === '00' && v5) last_item_row_idx = i;
             }
         }
-        
+
         if (!target_l1_found) throw new Error("Livello 1 non trovato nel foglio.");
         if (level2Code !== '00' && !target_l2_found) throw new Error("Livello 2 non trovato.");
-        
+
         let insertAbsoluteRow = (last_item_row_idx !== -1) ? startRowIdx + last_item_row_idx + 1 : startRowIdx + values.length;
-        
+
         const rangeToInsert = sheet.getRangeByIndexes(insertAbsoluteRow, 0, 1, 10).getEntireRow();
         rangeToInsert.insert(Excel.InsertShiftDirection.down);
-        
+
         let targetCell = sheet.getCell(insertAbsoluteRow, is_4_39 ? 3 : 5);
         targetCell.values = [[newCodeString]];
         targetCell.format.font.name = "Calibri";
         targetCell.format.font.size = 12;
-        
+
         await context.sync();
     });
 }
@@ -404,13 +404,13 @@ function loadHistory() {
     history.forEach(item => {
         const li = document.createElement('li');
         li.className = 'history-item';
-        const date = new Date(item.timestamp).toLocaleDateString('it-IT', { hour: '2-digit', minute:'2-digit' });
+        const date = new Date(item.timestamp).toLocaleDateString('it-IT', { hour: '2-digit', minute: '2-digit' });
         li.innerHTML = `<div><div class="history-code">${item.code}</div><div class="history-desc">${item.description} • ${date}</div></div>
             <button class="history-copy" title="Copia" data-code="${item.code} - ${item.description}"><i class="fa-regular fa-copy"></i></button>`;
         historyList.appendChild(li);
     });
     document.querySelectorAll('.history-copy').forEach(btn => {
-        btn.addEventListener('click', function() {
+        btn.addEventListener('click', function () {
             navigator.clipboard.writeText(this.getAttribute('data-code')).then(() => {
                 const icon = this.querySelector('i');
                 icon.className = 'fa-solid fa-check text-success';
