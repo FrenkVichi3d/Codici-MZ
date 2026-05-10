@@ -81,12 +81,13 @@
                 </div>
 
                 <button id="generateBtn" class="btn-primary">
-                    <i class="fa-solid fa-wand-magic-sparkles"></i> Anteprima Codice
+                    <i class="fa-solid fa-plus-circle"></i> Genera e Inserisci in Excel
                 </button>
             </div>
 
             <div class="card result-container" id="resultCard" style="display: none;">
-                <h2 style="font-size: 1.1rem;">Codice Generato</h2>
+                <div class="success-badge"><i class="fa-solid fa-check-circle"></i> Codice Inserito</div>
+                <h2 style="font-size: 1.1rem; margin-top: 10px;">Dettaglio Codice</h2>
                 <div class="code-display" style="font-size: 1.2rem;">
                     <span id="finalCode"></span>
                     <button id="copyBtn" class="icon-btn" title="Copia negli appunti">
@@ -96,9 +97,6 @@
                 <div class="code-breakdown" id="codeBreakdown">
                     <!-- Breakdown of the code will be injected here -->
                 </div>
-                <button id="saveBtn" class="btn-secondary mt-15" style="border-color: var(--primary); color: var(--primary);">
-                    <i class="fa-solid fa-file-excel"></i> Inserisci riga in Excel
-                </button>
             </div>
 
             <div class="card history-container">
