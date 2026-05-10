@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="it">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Generatore Codici MZ Robotics</title>
+    
+    <!-- LIBRERIA FONDAMENTALE: Office.js permette di parlare con Excel -->
+    <script src="https://appsforoffice.microsoft.com/lib/1/hosted/office.js"></script>
+    
+    <link rel="stylesheet" href="styles.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+
+<body>
+    <div class="app-container">
+        <header>
+            <div class="logo">
+                <i class="fa-solid fa-robot"></i>
+                <h1>Codici MZ</h1>
+                <button id="syncBtn" class="icon-btn" title="Rileggi Foglio Excel"
+                    style="margin-left: 10px; font-size: 1.5rem; color: var(--primary);">
+                    <i class="fa-solid fa-rotate"></i>
+                </button>
+            </div>
+            <p style="font-size: 0.9rem;">Seleziona i parametri coerenti con il componente</p>
+        </header>
+
+        <!-- Div di caricamento iniziale -->
+        <div id="loadingOverlay" style="text-align: center; margin-top: 50px;">
+            <i class="fa-solid fa-circle-notch fa-spin fa-3x" style="color: var(--primary);"></i>
+            <p style="margin-top: 15px; font-weight: 600;">Sincronizzazione con Excel...</p>
+            <p style="font-size: 0.8rem; color: var(--text-muted); padding: 0 20px;">
+                Assicurati di aprire il componente all'interno di Excel.
+            </p>
+        </div>
+
+        <main id="appMain" style="display: none;">
+            <div class="card form-container">
+                <div class="form-group">
+                    <label for="sheetSelect">Categoria Principale</label>
+                    <div class="select-wrapper">
+                        <select id="sheetSelect">
+                            <option value="">Caricamento...</option>
+                        </select>
+                        <i class="fa-solid fa-chevron-down"></i>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label for="level1Select">Livello 1 (Tipologia)</label>
+                    <div class="select-wrapper">
+                        <select id="level1Select" disabled>
+                            <option value="">Seleziona Categoria Principale prima...</option>
+                        </select>
+                        <i class="fa-solid fa-chevron-down"></i>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label for="level2Select">Livello 2 (Dettaglio)</label>
+                    <div class="select-wrapper">
+                        <select id="level2Select" disabled>
+                            <option value="">Seleziona Livello 1 prima...</option>
+                        </select>
+                        <i class="fa-solid fa-chevron-down"></i>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label for="progressiveInput">Progressivo (4 Cifre)</label>
+                    <input type="number" id="progressiveInput" min="1" max="9999" value="1" placeholder="0001">
+                </div>
+
+                <div class="form-group">
+                    <label for="descriptionInput">Descrizione</label>
+                    <input type="text" id="descriptionInput" placeholder="Inserisci la descrizione"
+                        autocomplete="off">
+                </div>
+
+                <button id="generateBtn" class="btn-primary">
+                    <i class="fa-solid fa-wand-magic-sparkles"></i> Anteprima Codice
+                </button>
+            </div>
+
+            <div class="card result-container" id="resultCard" style="display: none;">
+                <h2 style="font-size: 1.1rem;">Codice Generato</h2>
+                <div class="code-display" style="font-size: 1.2rem;">
+                    <span id="finalCode"></span>
+                    <button id="copyBtn" class="icon-btn" title="Copia negli appunti">
+                        <i class="fa-regular fa-copy"></i>
+                    </button>
+                </div>
+                <div class="code-breakdown" id="codeBreakdown">
+                    <!-- Breakdown of the code will be injected here -->
+                </div>
+                <button id="saveBtn" class="btn-secondary mt-15" style="border-color: var(--primary); color: var(--primary);">
+                    <i class="fa-solid fa-file-excel"></i> Inserisci riga in Excel
+                </button>
+            </div>
+
+            <div class="card history-container">
+                <div class="history-header">
+                    <h2 style="font-size: 1.1rem;">Storico Sessione</h2>
+                    <button id="clearHistoryBtn" class="text-btn text-danger">Svuota</button>
+                </div>
+                <ul id="historyList" class="history-list">
+                    <li class="empty-state">Nessun codice generato in questa sessione.</li>
+                </ul>
+            </div>
+        </main>
+    </div>
+
+    <!-- Scripts -->
+    <script src="app.js"></script>
+</body>
+
+</html>

@@ -1,0 +1,252 @@
+:root {
+    --primary: #2563eb;
+    --primary-hover: #1d4ed8;
+    --secondary: #f1f5f9;
+    --secondary-hover: #e2e8f0;
+    --text-main: #0f172a;
+    --text-muted: #64748b;
+    --bg-main: #f8fafc;
+    --card-bg: #ffffff;
+    --border: #e2e8f0;
+    --success: #10b981;
+    --danger: #ef4444;
+    --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+    --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+    --radius: 8px;
+    --transition: all 0.2s ease;
+}
+
+* {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+}
+
+body {
+    font-family: 'Inter', sans-serif;
+    background-color: var(--bg-main);
+    color: var(--text-main);
+    line-height: 1.4;
+    /* Riduciamo i padding perché il Task Pane di Excel è stretto */
+    padding: 1rem 0.5rem;
+}
+
+.app-container {
+    width: 100%;
+    margin: 0 auto;
+}
+
+header {
+    text-align: center;
+    margin-bottom: 1.5rem;
+}
+
+.logo {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    margin-bottom: 5px;
+    color: var(--primary);
+}
+
+.logo i { font-size: 2rem; }
+h1 { font-size: 1.8rem; font-weight: 700; color: var(--text-main); }
+
+.card {
+    background: var(--card-bg);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow-sm);
+    padding: 1.25rem;
+    margin-bottom: 1rem;
+    border: 1px solid var(--border);
+}
+
+.form-group { margin-bottom: 1.25rem; }
+
+label {
+    display: block;
+    font-weight: 600;
+    margin-bottom: 0.4rem;
+    color: var(--text-main);
+    font-size: 0.85rem;
+}
+
+.select-wrapper { position: relative; }
+
+.select-wrapper i {
+    position: absolute;
+    right: 0.75rem;
+    top: 50%;
+    transform: translateY(-50%);
+    color: var(--text-muted);
+    pointer-events: none;
+    font-size: 0.85rem;
+}
+
+select, input {
+    width: 100%;
+    padding: 0.6rem 0.75rem;
+    font-size: 0.95rem;
+    font-family: inherit;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    background-color: #fff;
+    color: var(--text-main);
+    transition: var(--transition);
+    appearance: none;
+}
+
+input[type="number"] { appearance: auto; }
+
+select:focus, input:focus {
+    outline: none;
+    border-color: var(--primary);
+    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+}
+
+select:disabled, input:disabled {
+    background-color: var(--secondary);
+    color: var(--text-muted);
+    cursor: not-allowed;
+}
+
+.btn-primary {
+    width: 100%;
+    padding: 0.75rem;
+    background-color: var(--primary);
+    color: white;
+    border: none;
+    border-radius: 6px;
+    font-size: 1rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: var(--transition);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+}
+
+.btn-primary:hover { background-color: var(--primary-hover); transform: translateY(-1px); }
+
+.btn-secondary {
+    padding: 0.6rem;
+    background-color: var(--secondary);
+    color: var(--text-main);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: var(--transition);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    width: 100%;
+}
+
+.btn-secondary:hover { background-color: var(--secondary-hover); }
+
+.btn-success { background-color: var(--success); color: white; border-color: var(--success); }
+.btn-success:hover { background-color: #059669; }
+
+.mt-15 { margin-top: 1rem; }
+
+.result-container {
+    border-top: 3px solid var(--primary);
+    animation: slideDown 0.3s ease;
+}
+
+@keyframes slideDown {
+    from { opacity: 0; transform: translateY(-10px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+.code-display {
+    background-color: var(--secondary);
+    padding: 1rem;
+    border-radius: 6px;
+    font-family: monospace;
+    font-weight: 700;
+    color: var(--primary);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border: 1px dashed var(--border);
+    word-break: break-all;
+}
+
+.icon-btn {
+    background: none;
+    border: none;
+    color: var(--text-muted);
+    font-size: 1.1rem;
+    cursor: pointer;
+    padding: 0.4rem;
+    border-radius: 4px;
+    transition: var(--transition);
+}
+
+.icon-btn:hover { background-color: var(--card-bg); color: var(--primary); }
+.text-success { color: var(--success) !important; }
+
+.code-breakdown {
+    margin-top: 0.75rem;
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 0.5rem;
+}
+
+.breakdown-item {
+    background: var(--bg-main);
+    padding: 0.5rem;
+    border-radius: 4px;
+    border: 1px solid var(--border);
+    text-align: center;
+}
+
+.breakdown-label {
+    display: block;
+    font-size: 0.7rem;
+    color: var(--text-muted);
+    margin-bottom: 0.15rem;
+    text-transform: uppercase;
+    font-weight: 600;
+}
+
+.breakdown-value { font-weight: 700; color: var(--text-main); font-size: 0.9rem;}
+
+.history-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.75rem; }
+.text-btn { background: none; border: none; font-size: 0.8rem; font-weight: 600; cursor: pointer; }
+.text-danger { color: var(--danger); }
+.text-danger:hover { text-decoration: underline; }
+.history-list { list-style: none; }
+
+.history-item {
+    padding: 0.75rem 0;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+.history-item:last-child { border-bottom: none; }
+.history-code { font-family: monospace; font-weight: 600; font-size: 0.95rem; }
+.history-desc { font-size: 0.75rem; color: var(--text-muted); margin-top: 0.2rem; }
+
+.history-copy {
+    color: var(--text-muted);
+    background: var(--secondary);
+    border: none;
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: var(--transition);
+}
+.history-copy:hover { background: var(--primary); color: white; }
+
+.empty-state { text-align: center; padding: 1.5rem; color: var(--text-muted); font-style: italic; font-size: 0.85rem;}
