@@ -423,4 +423,3 @@ function loadHistory() {
 clearHistoryBtn.addEventListener('click', () => {
     if (confirm('Svuotare lo storico?')) { localStorage.removeItem('mz_code_history'); loadHistory(); }
 });
-);
