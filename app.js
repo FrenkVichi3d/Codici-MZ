@@ -257,8 +257,19 @@ generateBtn.addEventListener('click', async () => {
     try {
         await insertCodeIntoExcel(selectedSheet.sheet, selectedLevel1.code, lvl2Code, finalCode);
 
-        // COPIA AUTOMATICA NEGLI APPUNTI
-        await navigator.clipboard.writeText(finalCode);
+        // COPIA AUTOMATICA NEGLI APPUNTI (senza bloccare il codice)
+        try {
+            if (navigator.clipboard && navigator.clipboard.writeText) {
+                navigator.clipboard.writeText(finalCode).catch(e => console.log("Copia fallita", e));
+            } else {
+                const textArea = document.createElement("textarea");
+                textArea.value = finalCode;
+                document.body.appendChild(textArea);
+                textArea.select();
+                document.execCommand('copy');
+                document.body.removeChild(textArea);
+            }
+        } catch(e) { console.log(e); }
 
         if (selectedLevel2) selectedLevel2.max_progressive = progVal;
         else selectedLevel1.max_progressive = progVal;
