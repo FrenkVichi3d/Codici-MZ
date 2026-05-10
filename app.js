@@ -250,26 +250,28 @@ generateBtn.addEventListener('click', async () => {
     const progCode = progVal.toString().padStart(4, '0');
     let finalCode = `${prefix}.${lvl1Code}.${lvl2Code}.${progCode} - ${description}`;
 
+    // COPIA AUTOMATICA NEGLI APPUNTI (SINCRONA, PRIMA DELL'INSERIMENTO)
+    // Questo garantisce che funzioni perché avviene subito dopo il click dell'utente
+    try {
+        const textArea = document.createElement("textarea");
+        textArea.value = finalCode;
+        textArea.style.position = "fixed";  // Nasconde la textarea
+        textArea.style.left = "-9999px";
+        document.body.appendChild(textArea);
+        textArea.focus();
+        textArea.select();
+        document.execCommand('copy');
+        document.body.removeChild(textArea);
+    } catch(e) {
+        console.log("Copia automatica fallita:", e);
+    }
+
     const originalContent = generateBtn.innerHTML;
     generateBtn.disabled = true;
     generateBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Inserimento...';
 
     try {
         await insertCodeIntoExcel(selectedSheet.sheet, selectedLevel1.code, lvl2Code, finalCode);
-
-        // COPIA AUTOMATICA NEGLI APPUNTI (senza bloccare il codice)
-        try {
-            if (navigator.clipboard && navigator.clipboard.writeText) {
-                navigator.clipboard.writeText(finalCode).catch(e => console.log("Copia fallita", e));
-            } else {
-                const textArea = document.createElement("textarea");
-                textArea.value = finalCode;
-                document.body.appendChild(textArea);
-                textArea.select();
-                document.execCommand('copy');
-                document.body.removeChild(textArea);
-            }
-        } catch(e) { console.log(e); }
 
         if (selectedLevel2) selectedLevel2.max_progressive = progVal;
         else selectedLevel1.max_progressive = progVal;
