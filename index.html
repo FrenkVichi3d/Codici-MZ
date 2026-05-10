@@ -85,4 +85,34 @@
                 </button>
             </div>
 
-            <div class="card result-container"
+            <div class="card result-container" id="resultCard" style="display: none;">
+                <div class="success-badge"><i class="fa-solid fa-check-circle"></i> Codice Inserito</div>
+                <h2 style="font-size: 1.1rem; margin-top: 10px;">Dettaglio Codice</h2>
+                <div class="code-display" style="font-size: 1.2rem;">
+                    <span id="finalCode"></span>
+                    <button id="copyBtn" class="icon-btn" title="Copia negli appunti">
+                        <i class="fa-regular fa-copy"></i>
+                    </button>
+                </div>
+                <div class="code-breakdown" id="codeBreakdown">
+                    <!-- Breakdown of the code will be injected here -->
+                </div>
+            </div>
+
+            <div class="card history-container">
+                <div class="history-header">
+                    <h2 style="font-size: 1.1rem;">Storico Sessione</h2>
+                    <button id="clearHistoryBtn" class="text-btn text-danger">Svuota</button>
+                </div>
+                <ul id="historyList" class="history-list">
+                    <li class="empty-state">Nessun codice generato in questa sessione.</li>
+                </ul>
+            </div>
+        </main>
+    </div>
+
+    <!-- Scripts -->
+    <script src="app.js"></script>
+</body>
+
+</html>
