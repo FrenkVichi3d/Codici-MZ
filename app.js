@@ -20,6 +20,13 @@ const clearHistoryBtn = document.getElementById('clearHistoryBtn');
 const appMain = document.getElementById('appMain');
 const loadingOverlay = document.getElementById('loadingOverlay');
 
+// Global Search DOM Elements
+const globalSearchInput = document.getElementById('globalSearchInput');
+const clearSearchBtn = document.getElementById('clearSearchBtn');
+const searchResultsContainer = document.getElementById('searchResultsContainer');
+const searchResultsList = document.getElementById('searchResultsList');
+const searchCount = document.getElementById('searchCount');
+
 // Office Initialization
 Office.onReady((info) => {
     if (info.host === Office.HostType.Excel) {
@@ -74,6 +81,8 @@ async function fetchSchemaFromExcel() {
             await context.sync();
 
             currentSchema = [];
+            window.allExistingItems = []; // Catalogo globale per la ricerca veloce
+
             activeRanges.forEach(obj => {
                 const sheetName = obj.name;
                 const values = obj.range.values;
@@ -98,6 +107,18 @@ async function fetchSchemaFromExcel() {
                     const v3 = row.length > 3 && row[3] ? String(row[3]).trim() : "";
                     const v4 = row.length > 4 && row[4] ? String(row[4]).trim() : "";
                     const v5 = row.length > 5 && row[5] ? String(row[5]).trim() : "";
+
+                    // Aggiunta al catalogo globale
+                    let codeString = "";
+                    if (is_4_39 && v3 && v3.includes('-')) codeString = v3;
+                    else if (!is_4_39 && v5 && v5.includes('-')) codeString = v5;
+                    
+                    if (codeString) {
+                        window.allExistingItems.push({
+                            sheet: sheetName,
+                            text: codeString
+                        });
+                    }
 
                     if (is_4_39) {
                         if (v1 && v2 && v2 !== 'nan' && v2 !== 'N. PZ') {
@@ -262,7 +283,7 @@ generateBtn.addEventListener('click', async () => {
         textArea.select();
         document.execCommand('copy');
         document.body.removeChild(textArea);
-    } catch(e) {
+    } catch (e) {
         console.log("Copia automatica fallita:", e);
     }
 
@@ -402,3 +423,109 @@ function loadHistory() {
 clearHistoryBtn.addEventListener('click', () => {
     if (confirm('Svuotare?')) { localStorage.removeItem('mz_code_history'); loadHistory(); }
 });
+
+// --- LOGICA MOTORE DI RICERCA GLOBALE ---
+
+if (globalSearchInput) {
+    globalSearchInput.addEventListener('input', (e) => {
+        const term = e.target.value.trim().toLowerCase();
+        
+        // Gestione pulsante cancella
+        if (term.length > 0) {
+            clearSearchBtn.style.display = 'block';
+        } else {
+            clearSearchBtn.style.display = 'none';
+            searchResultsContainer.style.display = 'none';
+            return;
+        }
+        
+        // Ricerca solo dopo 2 caratteri per performance
+        if (term.length < 2) return;
+
+        // Supporto ricerca multi-parola (es: "LAM SP4")
+        const terms = term.split(' ').filter(t => t);
+        
+        const results = (window.allExistingItems || []).filter(item => {
+            const textLower = item.text.toLowerCase();
+            return terms.every(t => textLower.includes(t));
+        });
+        
+        renderSearchResults(results.slice(0, 50)); // Limitiamo a 50 per fluidità
+    });
+}
+
+if (clearSearchBtn) {
+    clearSearchBtn.addEventListener('click', () => {
+        globalSearchInput.value = '';
+        globalSearchInput.dispatchEvent(new Event('input'));
+    });
+}
+
+function renderSearchResults(results) {
+    if (!searchResultsList || !searchResultsContainer || !searchCount) return;
+    
+    searchResultsList.innerHTML = '';
+    
+    if (results.length === 0) {
+        searchResultsList.innerHTML = '<li class="empty-state">Nessun componente trovato.</li>';
+        searchCount.textContent = '0 risultati';
+    } else {
+        searchCount.textContent = `${results.length} risultati trovati`;
+        
+        results.forEach(item => {
+            const li = document.createElement('li');
+            li.className = 'history-item';
+            
+            // Separiamo codice e descrizione per lo stile
+            const parts = item.text.split(' - ');
+            const code = parts[0];
+            const desc = parts.slice(1).join(' - ');
+            
+            li.innerHTML = `
+                <div style="flex-grow: 1; padding-right: 10px;">
+                    <div class="history-code" style="font-size:0.85rem; color: var(--primary); font-weight: 700;">${code}</div>
+                    <div class="history-desc" style="font-size:0.8rem; line-height: 1.2; margin-top: 2px;">${desc}</div>
+                    <div style="font-size:0.65rem; color: var(--text-muted); margin-top: 4px; display: flex; align-items: center; gap: 4px;">
+                        <i class="fa-solid fa-file-excel"></i> Foglio: <strong>${item.sheet}</strong>
+                    </div>
+                </div>
+                <button class="history-copy search-copy-btn" title="Copia" data-full="${item.text}">
+                    <i class="fa-regular fa-copy"></i>
+                </button>
+            `;
+            searchResultsList.appendChild(li);
+        });
+        
+        // Attiviamo i pulsanti di copia nei risultati
+        searchResultsList.querySelectorAll('.search-copy-btn').forEach(btn => {
+            btn.addEventListener('click', function() {
+                const textToCopy = this.getAttribute('data-full');
+                copyToClipboard(textToCopy, this);
+            });
+        });
+    }
+    searchResultsContainer.style.display = 'block';
+}
+
+// Funzione di utilità per la copia (riutilizzabile)
+function copyToClipboard(text, btnElement) {
+    try {
+        const textArea = document.createElement("textarea");
+        textArea.value = text;
+        textArea.style.position = "fixed";
+        textArea.style.left = "-9999px";
+        document.body.appendChild(textArea);
+        textArea.focus();
+        textArea.select();
+        document.execCommand('copy');
+        document.body.removeChild(textArea);
+        
+        const icon = btnElement.querySelector('i');
+        if (icon) {
+            icon.className = 'fa-solid fa-check text-success';
+            setTimeout(() => icon.className = 'fa-regular fa-copy', 2000);
+        }
+    } catch(e) {
+        console.error("Errore copia:", e);
+    }
+}
