@@ -42,9 +42,19 @@ async function initApp() {
         loadHistory();
         await fetchSchemaFromExcel();
     } catch (e) {
+        // MOSTRA L'ERRORE DIRETTAMENTE NELL'INTERFACCIA PER DEBUG
+        if (loadingOverlay) {
+            loadingOverlay.innerHTML = `<i class="fa-solid fa-triangle-exclamation fa-3x" style="color:var(--danger);"></i>
+                                       <p style="margin-top:15px; color:var(--danger); font-weight:bold;">Errore di Caricamento</p>
+                                       <p style="font-size:0.75rem; color:var(--text-main); padding:0 10px;">${e.message}</p>
+                                       <button onclick="location.reload()" style="margin-top:10px; padding:5px 10px; border-radius:5px; border:1px solid var(--border); cursor:pointer;">Riprova</button>`;
+            loadingOverlay.style.display = 'block';
+        }
         console.error("Init Error:", e);
     } finally {
-        if (loadingOverlay) loadingOverlay.style.display = 'none';
+        if (loadingOverlay && !loadingOverlay.innerHTML.includes('Errore')) {
+            loadingOverlay.style.display = 'none';
+        }
         if (appMain) appMain.style.display = 'block';
     }
 }
@@ -56,110 +66,112 @@ function extractProgressive(code_str) {
 }
 
 async function fetchSchemaFromExcel() {
-    try {
-        await Excel.run(async (context) => {
-            const sheets = context.workbook.worksheets;
-            sheets.load("items/name");
-            await context.sync();
+    return Excel.run(async (context) => {
+        const sheets = context.workbook.worksheets;
+        sheets.load("items/name");
+        await context.sync();
 
-            const sheetItems = sheets.items;
-            const rangeObjects = sheetItems.map(sheet => ({
-                name: sheet.name,
-                range: sheet.getUsedRangeOrNullObject()
-            }));
-
-            await context.sync();
-
-            const activeRanges = [];
-            rangeObjects.forEach(obj => {
-                if (!obj.range.isNullObject) {
-                    obj.range.load(["values", "rowIndex"]);
-                    activeRanges.push(obj);
-                }
+        const sheetItems = sheets.items;
+        const rangeObjects = [];
+        
+        // Prima fase: identifichiamo i range usati
+        for (let i = 0; i < sheetItems.length; i++) {
+            const s = sheetItems[i];
+            rangeObjects.push({
+                name: s.name,
+                range: s.getUsedRangeOrNullObject()
             });
+        }
 
-            await context.sync();
+        await context.sync();
 
-            currentSchema = [];
-            window.allExistingItems = []; // Catalogo globale per la ricerca veloce
+        const activeRanges = [];
+        rangeObjects.forEach(obj => {
+            if (!obj.range.isNullObject) {
+                // Carichiamo rowIndex e values in modo esplicito come stringa
+                obj.range.load("values, rowIndex");
+                activeRanges.push(obj);
+            }
+        });
 
-            activeRanges.forEach(obj => {
-                const sheetName = obj.name;
-                const values = obj.range.values;
-                const sheetObj = { sheet: sheetName, categories: [] };
-                const is_4_39 = sheetName.includes('4.39');
+        await context.sync();
 
-                let current_level1 = null;
-                let current_level2 = null;
+        currentSchema = [];
+        window.allExistingItems = [];
+
+        activeRanges.forEach(obj => {
+            const sheetName = obj.name;
+            const values = obj.range.values;
+            const startRow = obj.range.rowIndex;
+            const sheetObj = { sheet: sheetName, categories: [] };
+            const is_4_39 = sheetName.includes('4.39');
+
+            let current_level1 = null;
+            let current_level2 = null;
+
+            if (is_4_39) {
+                current_level1 = { name: 'ELETTRICI', code: '39', prefix: '4', subcategories: [], max_progressive: 0 };
+                sheetObj.categories.push(current_level1);
+            }
+
+            for (let rowIdx = 0; rowIdx < values.length; rowIdx++) {
+                const row = values[rowIdx];
+                if (!row || row.length < 3) continue;
+
+                const v0 = row[0] ? String(row[0]).trim() : "";
+                const v1 = row[1] ? String(row[1]).trim() : "";
+                const v2 = row[2] ? String(row[2]).trim() : "";
+                const v3 = row.length > 3 ? String(row[3]).trim() : "";
+                const v4 = row.length > 4 ? String(row[4]).trim() : "";
+                const v5 = row.length > 5 ? String(row[5]).trim() : "";
+
+                // POPOLAMENTO CATALOGO RICERCA
+                // Riconosciamo un codice se inizia con un numero e contiene punti
+                let possibleCode = is_4_39 ? v3 : v5;
+                if (possibleCode && possibleCode.length > 5 && /^\d+\./.test(possibleCode)) {
+                    window.allExistingItems.push({
+                        sheet: sheetName,
+                        text: possibleCode,
+                        rowIndex: startRow + rowIdx,
+                        colIndex: is_4_39 ? 3 : 5
+                    });
+                }
 
                 if (is_4_39) {
-                    current_level1 = { name: 'ELETTRICI', code: '39', prefix: '4', subcategories: [], max_progressive: 0 };
-                    sheetObj.categories.push(current_level1);
-                }
-
-                for (let rowIdx = 0; rowIdx < values.length; rowIdx++) {
-                    const row = values[rowIdx];
-                    if (!row || row.length < 3) continue;
-
-                    const v0 = row[0] ? String(row[0]).trim() : "";
-                    const v1 = row[1] ? String(row[1]).trim() : "";
-                    const v2 = row[2] ? String(row[2]).trim() : "";
-                    const v3 = row.length > 3 && row[3] ? String(row[3]).trim() : "";
-                    const v4 = row.length > 4 && row[4] ? String(row[4]).trim() : "";
-                    const v5 = row.length > 5 && row[5] ? String(row[5]).trim() : "";
-
-                    // Aggiunta al catalogo globale con posizione riga
-                    let codeString = "";
-                    if (is_4_39 && v3 && v3.includes('-')) codeString = v3;
-                    else if (!is_4_39 && v5 && v5.includes('-')) codeString = v5;
-                    
-                    if (codeString) {
-                        window.allExistingItems.push({
-                            sheet: sheetName,
-                            text: codeString,
-                            rowIndex: obj.range.rowIndex + rowIdx,
-                            colIndex: is_4_39 ? 3 : 5
-                        });
+                    if (v1 && v2 && v2 !== 'nan' && v2 !== 'N. PZ') {
+                        let c2 = v2.replace('.0', '').padStart(2, '0');
+                        current_level2 = { name: v1, code: c2, max_progressive: 0 };
+                        current_level1.subcategories.push(current_level2);
                     }
-
-                    if (is_4_39) {
-                        if (v1 && v2 && v2 !== 'nan' && v2 !== 'N. PZ') {
-                            let c2 = v2.replace('.0', '').padStart(2, '0');
-                            current_level2 = { name: v1, code: c2, max_progressive: 0 };
-                            current_level1.subcategories.push(current_level2);
-                        }
-                        if (v3) {
-                            const prog = extractProgressive(v3);
-                            if (current_level2 && prog > current_level2.max_progressive) current_level2.max_progressive = prog;
-                            else if (current_level1 && prog > current_level1.max_progressive) current_level1.max_progressive = prog;
-                        }
-                    } else {
-                        if (v1 && v2 && v2 !== 'nan' && v2 !== 'N. PZ') {
-                            let c1 = v2.replace('.0', '').padStart(2, '0');
-                            let p = v0 ? v0.replace('.0', '').replace('.', '') : sheetName.split(' ')[0];
-                            current_level1 = { name: v1, code: c1, prefix: p, subcategories: [], max_progressive: 0 };
-                            sheetObj.categories.push(current_level1);
-                            current_level2 = null;
-                        }
-                        if (v3 && v4 && v4 !== 'nan' && current_level1) {
-                            let c2 = v4.replace('.0', '').padStart(2, '0');
-                            current_level2 = { name: v3, code: c2, max_progressive: 0 };
-                            current_level1.subcategories.push(current_level2);
-                        }
-                        if (v5) {
-                            const prog = extractProgressive(v5);
-                            if (current_level2 && prog > current_level2.max_progressive) current_level2.max_progressive = prog;
-                            else if (current_level1 && prog > current_level1.max_progressive) current_level1.max_progressive = prog;
-                        }
+                    if (v3) {
+                        const prog = extractProgressive(v3);
+                        if (current_level2 && prog > current_level2.max_progressive) current_level2.max_progressive = prog;
+                        else if (current_level1 && prog > current_level1.max_progressive) current_level1.max_progressive = prog;
+                    }
+                } else {
+                    if (v1 && v2 && v2 !== 'nan' && v2 !== 'N. PZ') {
+                        let c1 = v2.replace('.0', '').padStart(2, '0');
+                        let p = v0 ? v0.replace('.0', '').replace('.', '') : sheetName.split(' ')[0];
+                        current_level1 = { name: v1, code: c1, prefix: p, subcategories: [], max_progressive: 0 };
+                        sheetObj.categories.push(current_level1);
+                        current_level2 = null;
+                    }
+                    if (v3 && v4 && v4 !== 'nan' && current_level1) {
+                        let c2 = v4.replace('.0', '').padStart(2, '0');
+                        current_level2 = { name: v3, code: c2, max_progressive: 0 };
+                        current_level1.subcategories.push(current_level2);
+                    }
+                    if (v5) {
+                        const prog = extractProgressive(v5);
+                        if (current_level2 && prog > current_level2.max_progressive) current_level2.max_progressive = prog;
+                        else if (current_level1 && prog > current_level1.max_progressive) current_level1.max_progressive = prog;
                     }
                 }
-                if (sheetObj.categories.length > 0) currentSchema.push(sheetObj);
-            });
-            populateSheets();
+            }
+            if (sheetObj.categories.length > 0) currentSchema.push(sheetObj);
         });
-    } catch (error) {
-        console.error("Errore schema:", error);
-    }
+        populateSheets();
+    });
 }
 
 function populateSheets() {
