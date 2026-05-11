@@ -38,6 +38,24 @@
         </div>
 
         <main id="appMain" style="display: none;">
+            
+            <!-- BARRA DI RICERCA GLOBALE -->
+            <div class="card search-container" style="margin-bottom: 1.25rem;">
+                <div style="position: relative; display: flex; align-items: center;">
+                    <i class="fa-solid fa-search" style="position: absolute; left: 1rem; color: var(--text-muted);"></i>
+                    <input type="text" id="globalSearchInput" placeholder="Cerca componente (es. LAM SP4)..." 
+                           style="padding-left: 2.5rem; padding-right: 2.5rem; width: 100%; border-radius: 9999px;" autocomplete="off">
+                    <button id="clearSearchBtn" style="position: absolute; right: 1rem; background: none; border: none; cursor: pointer; color: var(--text-muted); display: none; font-size: 1.1rem;">
+                        <i class="fa-solid fa-times-circle"></i>
+                    </button>
+                </div>
+                <div id="searchResultsContainer" style="display: none; margin-top: 15px; border-top: 1px solid var(--border); padding-top: 10px;">
+                    <p id="searchCount" style="font-size: 0.75rem; color: var(--text-muted); margin-bottom: 8px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em;"></p>
+                    <ul id="searchResultsList" class="history-list" style="max-height: 250px; overflow-y: auto;">
+                    </ul>
+                </div>
+            </div>
+
             <div class="card form-container">
                 <div class="form-group">
                     <label for="sheetSelect">Categoria Principale</label>
