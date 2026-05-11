@@ -73,7 +73,7 @@ async function fetchSchemaFromExcel() {
             const activeRanges = [];
             rangeObjects.forEach(obj => {
                 if (!obj.range.isNullObject) {
-                    obj.range.load("values");
+                    obj.range.load(["values", "rowIndex"]);
                     activeRanges.push(obj);
                 }
             });
