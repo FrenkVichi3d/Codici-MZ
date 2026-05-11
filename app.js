@@ -108,7 +108,7 @@ async function fetchSchemaFromExcel() {
                     const v4 = row.length > 4 && row[4] ? String(row[4]).trim() : "";
                     const v5 = row.length > 5 && row[5] ? String(row[5]).trim() : "";
 
-                    // Aggiunta al catalogo globale
+                    // Aggiunta al catalogo globale con posizione riga
                     let codeString = "";
                     if (is_4_39 && v3 && v3.includes('-')) codeString = v3;
                     else if (!is_4_39 && v5 && v5.includes('-')) codeString = v5;
@@ -116,7 +116,9 @@ async function fetchSchemaFromExcel() {
                     if (codeString) {
                         window.allExistingItems.push({
                             sheet: sheetName,
-                            text: codeString
+                            text: codeString,
+                            rowIndex: obj.range.rowIndex + rowIdx,
+                            colIndex: is_4_39 ? 3 : 5
                         });
                     }
 
@@ -475,6 +477,7 @@ function renderSearchResults(results) {
         results.forEach(item => {
             const li = document.createElement('li');
             li.className = 'history-item';
+            li.style.cursor = 'pointer'; // Indica che è cliccabile
             
             // Separiamo codice e descrizione per lo stile
             const parts = item.text.split(' - ');
@@ -482,17 +485,23 @@ function renderSearchResults(results) {
             const desc = parts.slice(1).join(' - ');
             
             li.innerHTML = `
-                <div style="flex-grow: 1; padding-right: 10px;">
+                <div class="result-info" style="flex-grow: 1; padding-right: 10px;">
                     <div class="history-code" style="font-size:0.85rem; color: var(--primary); font-weight: 700;">${code}</div>
                     <div class="history-desc" style="font-size:0.8rem; line-height: 1.2; margin-top: 2px;">${desc}</div>
                     <div style="font-size:0.65rem; color: var(--text-muted); margin-top: 4px; display: flex; align-items: center; gap: 4px;">
-                        <i class="fa-solid fa-file-excel"></i> Foglio: <strong>${item.sheet}</strong>
+                        <i class="fa-solid fa-location-dot"></i> Vai a riga ${item.rowIndex + 1} • <strong>${item.sheet}</strong>
                     </div>
                 </div>
                 <button class="history-copy search-copy-btn" title="Copia" data-full="${item.text}">
                     <i class="fa-regular fa-copy"></i>
                 </button>
             `;
+            
+            // Evento per andare alla cella cliccando sul corpo del risultato
+            li.querySelector('.result-info').addEventListener('click', () => {
+                goToExcelCell(item.sheet, item.rowIndex, item.colIndex);
+            });
+
             searchResultsList.appendChild(li);
         });
         
@@ -527,5 +536,20 @@ function copyToClipboard(text, btnElement) {
         }
     } catch(e) {
         console.error("Errore copia:", e);
+    }
+}
+
+// Nuova funzione per navigare verso una cella specifica
+async function goToExcelCell(sheetName, rowIndex, colIndex) {
+    try {
+        await Excel.run(async (context) => {
+            const sheet = context.workbook.worksheets.getItem(sheetName);
+            const cell = sheet.getCell(rowIndex, colIndex);
+            sheet.activate();
+            cell.select();
+            await context.sync();
+        });
+    } catch (error) {
+        console.error("Errore navigazione cella:", error);
     }
 }
