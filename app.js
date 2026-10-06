@@ -30,6 +30,11 @@ const searchCount = document.getElementById('searchCount');
 // Presets & Smart Suggestion DOM Elements
 const presetsList = document.getElementById('presetsList');
 const addPresetBtn = document.getElementById('addPresetBtn');
+const presetAddBox = document.getElementById('presetAddBox');
+const presetNameInput = document.getElementById('presetNameInput');
+const presetConfirmBtn = document.getElementById('presetConfirmBtn');
+const presetCancelBtn = document.getElementById('presetCancelBtn');
+const presetErrorMsg = document.getElementById('presetErrorMsg');
 const smartSuggestionCard = document.getElementById('smartSuggestionCard');
 const smartSuggestionPath = document.getElementById('smartSuggestionPath');
 const smartSuggestionReason = document.getElementById('smartSuggestionReason');
@@ -744,9 +749,56 @@ function removePreset(id) {
     renderPresets();
 }
 
-function saveCurrentAsPreset() {
+function openPresetAddBox() {
+    if (!presetAddBox || !presetNameInput) return;
+    
+    // Validazione: deve esserci almeno foglio e livello 1
     if (!selectedSheet || !selectedLevel1) {
-        alert('Seleziona prima la Categoria Principale e il Livello 1 per poter salvare la scorciatoia!');
+        showPresetError('Seleziona prima una Categoria Principale e un Livello 1!');
+        return;
+    }
+    
+    // Genera nome suggerito chiaro e sintetico
+    let defaultLabel = '';
+    if (selectedLevel2) {
+        defaultLabel = `${selectedLevel1.name.split(' ')[0]} / ${selectedLevel2.name}`;
+    } else {
+        defaultLabel = `${selectedSheet.sheet.split(' ')[0]} ${selectedLevel1.name}`;
+    }
+    if (defaultLabel.length > 25) defaultLabel = defaultLabel.substring(0, 24);
+    
+    presetNameInput.value = defaultLabel;
+    if (presetErrorMsg) presetErrorMsg.style.display = 'none';
+    presetAddBox.style.display = 'flex';
+    presetNameInput.focus();
+    presetNameInput.select();
+}
+
+function closePresetAddBox() {
+    if (presetAddBox) presetAddBox.style.display = 'none';
+    if (presetErrorMsg) presetErrorMsg.style.display = 'none';
+    if (presetNameInput) presetNameInput.value = '';
+}
+
+function showPresetError(msg) {
+    if (!presetErrorMsg) return;
+    presetErrorMsg.textContent = msg;
+    presetErrorMsg.style.display = 'block';
+    setTimeout(() => {
+        if (presetErrorMsg) presetErrorMsg.style.display = 'none';
+    }, 3500);
+}
+
+function confirmPresetAdd() {
+    if (!selectedSheet || !selectedLevel1) {
+        showPresetError('Seleziona prima Categoria e Livello 1!');
+        return;
+    }
+    
+    const label = presetNameInput ? presetNameInput.value.trim() : '';
+    if (!label) {
+        showPresetError('Inserisci un nome per la scorciatoia!');
+        if (presetNameInput) presetNameInput.focus();
         return;
     }
     
@@ -754,33 +806,55 @@ function saveCurrentAsPreset() {
     const lvl1Code = selectedLevel1.code;
     const lvl2Code = selectedLevel2 ? selectedLevel2.code : '00';
     
-    let defaultLabel = '';
-    if (selectedLevel2) {
-        defaultLabel = `${selectedLevel1.name.split(' ')[0]} / ${selectedLevel2.name}`;
-    } else {
-        defaultLabel = `${selectedSheet.sheet.split(' ')[0]} ${selectedLevel1.name}`;
-    }
-    if (defaultLabel.length > 25) defaultLabel = defaultLabel.substring(0, 24) + '...';
-    
-    const customName = prompt('Nome per questa scorciatoia rapida:', defaultLabel);
-    if (!customName || !customName.trim()) return;
-    
     const newPreset = {
         id: 'p_' + Date.now(),
-        label: customName.trim(),
+        label: label,
         sheetName: sheetName,
         lvl1Code: lvl1Code,
         lvl2Code: lvl2Code
     };
     
     currentPresets.push(newPreset);
-    localStorage.setItem('mz_code_presets', JSON.stringify(currentPresets));
+    try {
+        localStorage.setItem('mz_code_presets', JSON.stringify(currentPresets));
+    } catch (e) {
+        console.error("Errore salvataggio preferiti:", e);
+    }
+    
+    closePresetAddBox();
     renderPresets();
 }
 
 if (addPresetBtn) {
     addPresetBtn.addEventListener('click', () => {
-        saveCurrentAsPreset();
+        if (presetAddBox && presetAddBox.style.display === 'flex') {
+            closePresetAddBox();
+        } else {
+            openPresetAddBox();
+        }
+    });
+}
+
+if (presetConfirmBtn) {
+    presetConfirmBtn.addEventListener('click', () => {
+        confirmPresetAdd();
+    });
+}
+
+if (presetCancelBtn) {
+    presetCancelBtn.addEventListener('click', () => {
+        closePresetAddBox();
+    });
+}
+
+if (presetNameInput) {
+    presetNameInput.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') {
+            e.preventDefault();
+            confirmPresetAdd();
+        } else if (e.key === 'Escape') {
+            closePresetAddBox();
+        }
     });
 }
 
