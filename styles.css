@@ -334,6 +334,73 @@ select:disabled, input:disabled {
     background-color: rgba(0, 98, 255, 0.08);
 }
 
+.preset-add-box {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin-bottom: 0.6rem;
+    animation: slideDown 0.2s ease-out;
+}
+
+.preset-add-box input {
+    flex: 1;
+    padding: 0.4rem 0.65rem;
+    font-size: 0.8rem;
+    border: 1.5px solid var(--primary);
+    border-radius: 6px;
+    background: #fff;
+    color: var(--text-main);
+    box-shadow: 0 0 0 2px var(--primary-glow);
+}
+
+.btn-preset-confirm {
+    background: var(--success);
+    color: white;
+    border: none;
+    border-radius: 6px;
+    width: 30px;
+    height: 30px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    font-size: 0.85rem;
+    transition: var(--transition);
+}
+
+.btn-preset-confirm:hover {
+    filter: brightness(0.9);
+    transform: scale(1.05);
+}
+
+.btn-preset-cancel {
+    background: var(--secondary);
+    color: var(--text-muted);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    width: 30px;
+    height: 30px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    font-size: 0.85rem;
+    transition: var(--transition);
+}
+
+.btn-preset-cancel:hover {
+    color: var(--danger);
+    border-color: var(--danger);
+}
+
+.preset-error-msg {
+    font-size: 0.75rem;
+    color: var(--danger);
+    font-weight: 600;
+    margin-bottom: 0.5rem;
+    animation: slideDown 0.2s ease-out;
+}
+
 .presets-list {
     display: flex;
     flex-wrap: wrap;
