@@ -27,6 +27,15 @@ const searchResultsContainer = document.getElementById('searchResultsContainer')
 const searchResultsList = document.getElementById('searchResultsList');
 const searchCount = document.getElementById('searchCount');
 
+// Presets & Smart Suggestion DOM Elements
+const presetsList = document.getElementById('presetsList');
+const addPresetBtn = document.getElementById('addPresetBtn');
+const smartSuggestionCard = document.getElementById('smartSuggestionCard');
+const smartSuggestionPath = document.getElementById('smartSuggestionPath');
+const smartSuggestionReason = document.getElementById('smartSuggestionReason');
+const applySuggestionBtn = document.getElementById('applySuggestionBtn');
+const dismissSuggestionBtn = document.getElementById('dismissSuggestionBtn');
+
 // Office Initialization
 Office.onReady((info) => {
     if (info.host === Office.HostType.Excel) {
@@ -41,6 +50,8 @@ async function initApp() {
     try {
         loadHistory();
         await fetchSchemaFromExcel();
+        loadPresets();
+        initSmartSuggestion();
     } catch (e) {
         // MOSTRA L'ERRORE DIRETTAMENTE NELL'INTERFACCIA PER DEBUG
         if (loadingOverlay) {
@@ -194,10 +205,12 @@ sheetSelect.addEventListener('change', (e) => {
         level2Select.innerHTML = '<option value="">Seleziona Livello 1...</option>';
         level2Select.disabled = true;
         progressiveInput.value = 1;
+        highlightActivePreset();
         return;
     }
     selectedSheet = currentSchema[index];
     populateLevel1();
+    highlightActivePreset();
 });
 
 level1Select.addEventListener('change', (e) => {
@@ -207,10 +220,12 @@ level1Select.addEventListener('change', (e) => {
         level2Select.innerHTML = '<option value="">Seleziona Livello 1...</option>';
         level2Select.disabled = true;
         progressiveInput.value = 1;
+        highlightActivePreset();
         return;
     }
     selectedLevel1 = selectedSheet.categories[index];
     populateLevel2();
+    highlightActivePreset();
 });
 
 level2Select.addEventListener('change', (e) => {
@@ -218,10 +233,12 @@ level2Select.addEventListener('change', (e) => {
     if (index === '') {
         selectedLevel2 = null;
         progressiveInput.value = (selectedLevel1.max_progressive || 0) + 1;
+        highlightActivePreset();
         return;
     }
     selectedLevel2 = selectedLevel1.subcategories[index];
     if (selectedLevel2) progressiveInput.value = (selectedLevel2.max_progressive || 0) + 1;
+    highlightActivePreset();
 });
 
 function populateLevel1() {
@@ -262,6 +279,7 @@ syncBtn.addEventListener('click', async () => {
     const icon = syncBtn.querySelector('i');
     icon.classList.add('fa-spin');
     await fetchSchemaFromExcel();
+    loadPresets();
     icon.classList.remove('fa-spin');
     icon.className = 'fa-solid fa-check text-success';
     setTimeout(() => { icon.className = 'fa-solid fa-rotate'; }, 2000);
@@ -329,6 +347,7 @@ generateBtn.addEventListener('click', async () => {
 
         progressiveInput.value = progVal + 1;
         descriptionInput.value = '';
+        hideSmartSuggestion();
         generateBtn.innerHTML = '<i class="fa-solid fa-check"></i> Copiato & Inserito!';
         generateBtn.classList.add('btn-success');
 
@@ -564,4 +583,431 @@ async function goToExcelCell(sheetName, rowIndex, colIndex) {
     } catch (error) {
         console.error("Errore navigazione cella:", error);
     }
+}
+
+// ==========================================
+// SELEZIONE PROGRAMMATICA CATEGORIE
+// ==========================================
+function applyCategorySelectionByCodes(sheetName, lvl1Code, lvl2Code) {
+    if (!currentSchema || currentSchema.length === 0 || !sheetName) return false;
+    
+    // Trova l'indice del foglio
+    const sNameNorm = sheetName.trim().toUpperCase();
+    const sheetIdx = currentSchema.findIndex(s => s.sheet.trim().toUpperCase() === sNameNorm);
+    if (sheetIdx === -1) return false;
+    
+    sheetSelect.value = String(sheetIdx);
+    selectedSheet = currentSchema[sheetIdx];
+    populateLevel1();
+    
+    if (!lvl1Code) {
+        highlightActivePreset();
+        return true;
+    }
+    
+    // Trova Livello 1
+    const targetL1 = String(lvl1Code).padStart(2, '0');
+    const lvl1Idx = selectedSheet.categories.findIndex(c => String(c.code).padStart(2, '0') === targetL1);
+    if (lvl1Idx === -1) {
+        highlightActivePreset();
+        return true;
+    }
+    
+    level1Select.value = String(lvl1Idx);
+    selectedLevel1 = selectedSheet.categories[lvl1Idx];
+    populateLevel2();
+    
+    // Trova Livello 2 (se presente)
+    if (lvl2Code && lvl2Code !== '00' && selectedLevel1.subcategories && selectedLevel1.subcategories.length > 0) {
+        const targetL2 = String(lvl2Code).padStart(2, '0');
+        const lvl2Idx = selectedLevel1.subcategories.findIndex(sub => String(sub.code).padStart(2, '0') === targetL2);
+        if (lvl2Idx !== -1) {
+            level2Select.value = String(lvl2Idx);
+            selectedLevel2 = selectedLevel1.subcategories[lvl2Idx];
+            progressiveInput.value = (selectedLevel2.max_progressive || 0) + 1;
+        } else {
+            selectedLevel2 = null;
+            progressiveInput.value = (selectedLevel1.max_progressive || 0) + 1;
+        }
+    } else {
+        selectedLevel2 = null;
+        progressiveInput.value = (selectedLevel1.max_progressive || 0) + 1;
+    }
+    
+    highlightActivePreset();
+    return true;
+}
+
+// ==========================================
+// GESTIONE SCORCIATOIE RAPIDE (PRESET)
+// ==========================================
+let currentPresets = [];
+
+function loadPresets() {
+    try {
+        const saved = localStorage.getItem('mz_code_presets');
+        if (saved) {
+            currentPresets = JSON.parse(saved);
+        } else {
+            currentPresets = generateDefaultPresets();
+            localStorage.setItem('mz_code_presets', JSON.stringify(currentPresets));
+        }
+    } catch (e) {
+        currentPresets = generateDefaultPresets();
+    }
+    renderPresets();
+}
+
+function generateDefaultPresets() {
+    const defaults = [];
+    if (!currentSchema) return defaults;
+
+    currentSchema.forEach(sheet => {
+        const sName = sheet.sheet.toUpperCase();
+        if (sName.includes('5') || sName.includes('SEMILAVORATO')) {
+            const cat = sheet.categories.find(c => String(c.code).padStart(2, '0') === '01');
+            if (cat) {
+                const sub = (cat.subcategories || []).find(s => String(s.code).padStart(2, '0') === '01');
+                defaults.push({
+                    id: 'p_semi_carp',
+                    label: 'Carpenteria Acciaio',
+                    sheetName: sheet.sheet,
+                    lvl1Code: '01',
+                    lvl2Code: sub ? '01' : '00'
+                });
+            }
+        } else if (sName.includes('4.39') || sName.includes('ELETTRICI')) {
+            const cat = sheet.categories.find(c => String(c.code).padStart(2, '0') === '39');
+            if (cat) {
+                defaults.push({
+                    id: 'p_elec',
+                    label: 'Elettrici MZ',
+                    sheetName: sheet.sheet,
+                    lvl1Code: '39',
+                    lvl2Code: '00'
+                });
+            }
+        } else if (sName.includes('4') && sName.includes('COMMERCIALE')) {
+            if (sheet.categories.length > 0) {
+                const cat = sheet.categories[0];
+                defaults.push({
+                    id: 'p_comm',
+                    label: 'Commerciale',
+                    sheetName: sheet.sheet,
+                    lvl1Code: cat.code,
+                    lvl2Code: '00'
+                });
+            }
+        }
+    });
+    return defaults.slice(0, 4);
+}
+
+function renderPresets() {
+    if (!presetsList) return;
+    presetsList.innerHTML = '';
+    
+    if (currentPresets.length === 0) {
+        presetsList.innerHTML = '<span class="presets-empty">Nessuna scorciatoia. Clicca su "+ Salva Preferito" per aggiungerne una.</span>';
+        return;
+    }
+    
+    currentPresets.forEach(preset => {
+        const chip = document.createElement('div');
+        chip.className = 'preset-chip';
+        chip.setAttribute('data-id', preset.id);
+        chip.innerHTML = `
+            <span>${preset.label}</span>
+            <button type="button" class="preset-delete" title="Rimuovi scorciatoia" data-id="${preset.id}">&times;</button>
+        `;
+        
+        chip.addEventListener('click', (e) => {
+            if (e.target.closest('.preset-delete')) return;
+            applyCategorySelectionByCodes(preset.sheetName, preset.lvl1Code, preset.lvl2Code);
+        });
+        
+        const delBtn = chip.querySelector('.preset-delete');
+        delBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            removePreset(preset.id);
+        });
+        
+        presetsList.appendChild(chip);
+    });
+    
+    highlightActivePreset();
+}
+
+function removePreset(id) {
+    currentPresets = currentPresets.filter(p => p.id !== id);
+    localStorage.setItem('mz_code_presets', JSON.stringify(currentPresets));
+    renderPresets();
+}
+
+function saveCurrentAsPreset() {
+    if (!selectedSheet || !selectedLevel1) {
+        alert('Seleziona prima la Categoria Principale e il Livello 1 per poter salvare la scorciatoia!');
+        return;
+    }
+    
+    const sheetName = selectedSheet.sheet;
+    const lvl1Code = selectedLevel1.code;
+    const lvl2Code = selectedLevel2 ? selectedLevel2.code : '00';
+    
+    let defaultLabel = '';
+    if (selectedLevel2) {
+        defaultLabel = `${selectedLevel1.name.split(' ')[0]} / ${selectedLevel2.name}`;
+    } else {
+        defaultLabel = `${selectedSheet.sheet.split(' ')[0]} ${selectedLevel1.name}`;
+    }
+    if (defaultLabel.length > 25) defaultLabel = defaultLabel.substring(0, 24) + '...';
+    
+    const customName = prompt('Nome per questa scorciatoia rapida:', defaultLabel);
+    if (!customName || !customName.trim()) return;
+    
+    const newPreset = {
+        id: 'p_' + Date.now(),
+        label: customName.trim(),
+        sheetName: sheetName,
+        lvl1Code: lvl1Code,
+        lvl2Code: lvl2Code
+    };
+    
+    currentPresets.push(newPreset);
+    localStorage.setItem('mz_code_presets', JSON.stringify(currentPresets));
+    renderPresets();
+}
+
+if (addPresetBtn) {
+    addPresetBtn.addEventListener('click', () => {
+        saveCurrentAsPreset();
+    });
+}
+
+function highlightActivePreset() {
+    if (!presetsList || !selectedSheet || !selectedLevel1) {
+        if (presetsList) {
+            presetsList.querySelectorAll('.preset-chip').forEach(c => c.classList.remove('active'));
+        }
+        return;
+    }
+    const sName = selectedSheet.sheet.trim().toUpperCase();
+    const l1 = String(selectedLevel1.code).padStart(2, '0');
+    const l2 = selectedLevel2 ? String(selectedLevel2.code).padStart(2, '0') : '00';
+    
+    presetsList.querySelectorAll('.preset-chip').forEach(chip => {
+        const id = chip.getAttribute('data-id');
+        const p = currentPresets.find(item => item.id === id);
+        if (p && p.sheetName.trim().toUpperCase() === sName && 
+            String(p.lvl1Code).padStart(2, '0') === l1 && 
+            (String(p.lvl2Code).padStart(2, '0') === l2 || (p.lvl2Code === '00' && !selectedLevel2))) {
+            chip.classList.add('active');
+        } else {
+            chip.classList.remove('active');
+        }
+    });
+}
+
+// ==========================================
+// SUGGERITORE INTELLIGENTE DALLA DESCRIZIONE
+// ==========================================
+let currentSuggestedCategory = null;
+let suggestionDebounceTimer = null;
+
+function initSmartSuggestion() {
+    if (!descriptionInput) return;
+    
+    descriptionInput.addEventListener('input', (e) => {
+        clearTimeout(suggestionDebounceTimer);
+        const text = e.target.value.trim();
+        if (text.length < 3) {
+            hideSmartSuggestion();
+            return;
+        }
+        suggestionDebounceTimer = setTimeout(() => {
+            analyzeDescriptionForSuggestion(text);
+        }, 180);
+    });
+    
+    if (applySuggestionBtn) {
+        applySuggestionBtn.addEventListener('click', () => {
+            if (!currentSuggestedCategory) return;
+            const ok = applyCategorySelectionByCodes(
+                currentSuggestedCategory.sheetName,
+                currentSuggestedCategory.lvl1Code,
+                currentSuggestedCategory.lvl2Code
+            );
+            if (ok) {
+                hideSmartSuggestion();
+            }
+        });
+    }
+    
+    if (dismissSuggestionBtn) {
+        dismissSuggestionBtn.addEventListener('click', () => {
+            hideSmartSuggestion();
+        });
+    }
+}
+
+function hideSmartSuggestion() {
+    currentSuggestedCategory = null;
+    if (smartSuggestionCard) {
+        smartSuggestionCard.style.display = 'none';
+    }
+}
+
+function analyzeDescriptionForSuggestion(text) {
+    if (!smartSuggestionCard || !window.allExistingItems || window.allExistingItems.length === 0) {
+        hideSmartSuggestion();
+        return;
+    }
+    
+    const rawTokens = text.toUpperCase().split(/[\s,./\-_+]+/).filter(t => t.length >= 2);
+    const stopWords = new Set(["PER", "CON", "DEL", "DEI", "DELLA", "DELLE", "NEL", "SUL", "ALLA", "ALLE", "NON"]);
+    const tokens = rawTokens.filter(t => !stopWords.has(t));
+    if (tokens.length === 0) {
+        hideSmartSuggestion();
+        return;
+    }
+    
+    const candidateMap = new Map();
+    
+    // 1. Confronto con i componenti storici registrati
+    for (let i = 0; i < window.allExistingItems.length; i++) {
+        const item = window.allExistingItems[i];
+        const itemText = item.text.toUpperCase();
+        
+        const parts = itemText.split(' - ');
+        if (parts.length < 2) continue;
+        const codePart = parts[0].trim();
+        const descPart = parts.slice(1).join(' - ');
+        
+        const codeSegments = codePart.split('.');
+        if (codeSegments.length < 4) continue;
+        
+        const lvl1Code = codeSegments[1];
+        const lvl2Code = codeSegments[2];
+        const sheetName = item.sheet;
+        
+        let matchScore = 0;
+        for (const token of tokens) {
+            if (descPart.includes(token)) {
+                matchScore += 1;
+                const reg = new RegExp('\\b' + token + '\\b');
+                if (reg.test(descPart)) matchScore += 1.5;
+            }
+        }
+        
+        if (matchScore > 0) {
+            const key = `${sheetName}:::${lvl1Code}:::${lvl2Code}`;
+            if (!candidateMap.has(key)) {
+                candidateMap.set(key, {
+                    sheetName,
+                    lvl1Code,
+                    lvl2Code,
+                    score: 0,
+                    sampleDesc: descPart,
+                    matchCount: 0
+                });
+            }
+            const cand = candidateMap.get(key);
+            cand.score += matchScore;
+            cand.matchCount += 1;
+        }
+    }
+    
+    // 2. Bonus diretto da nomi categorie e sottocategorie
+    if (currentSchema) {
+        currentSchema.forEach(sheet => {
+            const sName = sheet.sheet;
+            sheet.categories.forEach(cat => {
+                const catName = cat.name.toUpperCase();
+                tokens.forEach(token => {
+                    if (catName.includes(token)) {
+                        const key = `${sName}:::${cat.code}:::00`;
+                        if (!candidateMap.has(key)) {
+                            candidateMap.set(key, { sheetName: sName, lvl1Code: cat.code, lvl2Code: '00', score: 0, sampleDesc: catName, matchCount: 0 });
+                        }
+                        candidateMap.get(key).score += 4;
+                    }
+                });
+                
+                (cat.subcategories || []).forEach(sub => {
+                    const subName = sub.name.toUpperCase();
+                    tokens.forEach(token => {
+                        if (subName.includes(token)) {
+                            const key = `${sName}:::${cat.code}:::${sub.code}`;
+                            if (!candidateMap.has(key)) {
+                                candidateMap.set(key, { sheetName: sName, lvl1Code: cat.code, lvl2Code: sub.code, score: 0, sampleDesc: subName, matchCount: 0 });
+                            }
+                            candidateMap.get(key).score += 5;
+                        }
+                    });
+                });
+            });
+        });
+    }
+    
+    if (candidateMap.size === 0) {
+        hideSmartSuggestion();
+        return;
+    }
+    
+    let bestCandidate = null;
+    let maxScore = 0;
+    for (const cand of candidateMap.values()) {
+        if (cand.score > maxScore) {
+            maxScore = cand.score;
+            bestCandidate = cand;
+        }
+    }
+    
+    if (!bestCandidate || maxScore < 2.5) {
+        hideSmartSuggestion();
+        return;
+    }
+    
+    // Se la categoria corrente è già identica, non disturbare l'utente
+    if (selectedSheet && selectedLevel1) {
+        const curSheet = selectedSheet.sheet.trim().toUpperCase();
+        const curL1 = String(selectedLevel1.code).padStart(2, '0');
+        const curL2 = selectedLevel2 ? String(selectedLevel2.code).padStart(2, '0') : '00';
+        if (curSheet === bestCandidate.sheetName.trim().toUpperCase() && 
+            curL1 === String(bestCandidate.lvl1Code).padStart(2, '0') && 
+            curL2 === String(bestCandidate.lvl2Code).padStart(2, '0')) {
+            hideSmartSuggestion();
+            return;
+        }
+    }
+    
+    // Ricava i nomi leggibili per la barra di suggerimento
+    const sheetObj = currentSchema.find(s => s.sheet.trim().toUpperCase() === bestCandidate.sheetName.trim().toUpperCase());
+    if (!sheetObj) {
+        hideSmartSuggestion();
+        return;
+    }
+    const catObj = sheetObj.categories.find(c => String(c.code).padStart(2, '0') === String(bestCandidate.lvl1Code).padStart(2, '0'));
+    if (!catObj) {
+        hideSmartSuggestion();
+        return;
+    }
+    let subObj = null;
+    if (bestCandidate.lvl2Code && bestCandidate.lvl2Code !== '00' && catObj.subcategories) {
+        subObj = catObj.subcategories.find(s => String(s.code).padStart(2, '0') === String(bestCandidate.lvl2Code).padStart(2, '0'));
+    }
+    
+    currentSuggestedCategory = bestCandidate;
+    
+    let path = `<strong>${sheetObj.sheet}</strong> › ${catObj.code} ${catObj.name}`;
+    if (subObj) {
+        path += ` › ${subObj.code} ${subObj.name}`;
+    }
+    smartSuggestionPath.innerHTML = path;
+    
+    let sample = bestCandidate.sampleDesc;
+    if (sample && sample.length > 32) sample = sample.substring(0, 30) + '...';
+    smartSuggestionReason.innerHTML = sample ? `Simile a: <em>"${sample}"</em>` : `Rilevato da parole chiave`;
+    
+    smartSuggestionCard.style.display = 'block';
 }
