@@ -5,10 +5,10 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Generatore Codici MZ Robotics</title>
-    
+
     <!-- LIBRERIA FONDAMENTALE: Office.js permette di parlare con Excel -->
     <script src="https://appsforoffice.microsoft.com/lib/1/hosted/office.js"></script>
-    
+
     <link rel="stylesheet" href="styles.css">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
@@ -38,25 +38,43 @@
         </div>
 
         <main id="appMain" style="display: none;">
-            
+
             <!-- BARRA DI RICERCA GLOBALE -->
             <div class="card search-container" style="margin-bottom: 1.25rem;">
                 <div style="position: relative; display: flex; align-items: center;">
                     <i class="fa-solid fa-search" style="position: absolute; left: 1rem; color: var(--text-muted);"></i>
-                    <input type="text" id="globalSearchInput" placeholder="Cerca componente (es. LAM SP4)..." 
-                           style="padding-left: 2.5rem; padding-right: 2.5rem; width: 100%; border-radius: 9999px;" autocomplete="off">
-                    <button id="clearSearchBtn" style="position: absolute; right: 1rem; background: none; border: none; cursor: pointer; color: var(--text-muted); display: none; font-size: 1.1rem;">
+                    <input type="text" id="globalSearchInput" placeholder="Cerca componente (es. LAM SP4)..."
+                        style="padding-left: 2.5rem; padding-right: 2.5rem; width: 100%; border-radius: 9999px;"
+                        autocomplete="off">
+                    <button id="clearSearchBtn"
+                        style="position: absolute; right: 1rem; background: none; border: none; cursor: pointer; color: var(--text-muted); display: none; font-size: 1.1rem;">
                         <i class="fa-solid fa-times-circle"></i>
                     </button>
                 </div>
-                <div id="searchResultsContainer" style="display: none; margin-top: 15px; border-top: 1px solid var(--border); padding-top: 10px;">
-                    <p id="searchCount" style="font-size: 0.75rem; color: var(--text-muted); margin-bottom: 8px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em;"></p>
+                <div id="searchResultsContainer"
+                    style="display: none; margin-top: 15px; border-top: 1px solid var(--border); padding-top: 10px;">
+                    <p id="searchCount"
+                        style="font-size: 0.75rem; color: var(--text-muted); margin-bottom: 8px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em;">
+                    </p>
                     <ul id="searchResultsList" class="history-list" style="max-height: 250px; overflow-y: auto;">
                     </ul>
                 </div>
             </div>
 
             <div class="card form-container">
+                <!-- PRESET RAPIDI / PREFERITI -->
+                <div class="presets-section">
+                    <div class="presets-header">
+                        <span class="presets-title"><i class="fa-solid fa-bolt"></i> Scorciatoie Rapide</span>
+                        <button id="addPresetBtn" type="button" class="preset-add-btn" title="Salva la combinazione attualmente selezionata come scorciatoia">
+                            <i class="fa-solid fa-star"></i> Salva Preferito
+                        </button>
+                    </div>
+                    <div id="presetsList" class="presets-list">
+                        <!-- Generati dinamicamente da app.js -->
+                    </div>
+                </div>
+
                 <div class="form-group">
                     <label for="sheetSelect">Categoria Principale</label>
                     <div class="select-wrapper">
@@ -92,13 +110,35 @@
                     <input type="number" id="progressiveInput" min="1" max="9999" value="1" placeholder="0001">
                 </div>
 
-                <div class="form-group">
+                <div class="form-group" style="margin-bottom: 0.75rem;">
                     <label for="descriptionInput">Descrizione</label>
-                    <input type="text" id="descriptionInput" placeholder="Inserisci la descrizione"
-                        autocomplete="off">
+                    <input type="text" id="descriptionInput" placeholder="Inserisci la descrizione" autocomplete="off">
                 </div>
 
-                <button id="generateBtn" class="btn-primary">
+                <!-- SUGGERIMENTO INTELLIGENTE DALLA DESCRIZIONE -->
+                <div id="smartSuggestionCard" class="smart-suggestion-card" style="display: none;">
+                    <div class="smart-suggestion-header">
+                        <div class="smart-suggestion-badge">
+                            <i class="fa-solid fa-wand-magic-sparkles"></i> Suggerimento Automatico
+                        </div>
+                        <button id="dismissSuggestionBtn" type="button" class="suggestion-dismiss" title="Chiudi suggerimento">
+                            <i class="fa-solid fa-xmark"></i>
+                        </button>
+                    </div>
+                    <div id="smartSuggestionPath" class="smart-suggestion-path">
+                        <!-- Es: 5 SEMILAVORATO › 01 ACCIAIO › 01 CARPENTERIA -->
+                    </div>
+                    <div class="smart-suggestion-footer">
+                        <span id="smartSuggestionReason" class="smart-suggestion-reason">
+                            <!-- Es: Trovato in componenti simili -->
+                        </span>
+                        <button id="applySuggestionBtn" type="button" class="btn-suggestion">
+                            <i class="fa-solid fa-check"></i> Applica
+                        </button>
+                    </div>
+                </div>
+
+                <button id="generateBtn" class="btn-primary" style="margin-top: 1rem;">
                     <i class="fa-solid fa-plus-circle"></i> Genera e Inserisci in Excel
                 </button>
             </div>
