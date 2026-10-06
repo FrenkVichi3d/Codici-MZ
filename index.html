@@ -70,6 +70,15 @@
                             <i class="fa-solid fa-star"></i> Salva Preferito
                         </button>
                     </div>
+
+                    <!-- Input inline per nominare il preferito senza prompt() bloccato da Excel -->
+                    <div id="presetAddBox" class="preset-add-box" style="display: none;">
+                        <input type="text" id="presetNameInput" placeholder="Nome scorciatoia..." maxlength="30" autocomplete="off">
+                        <button id="presetConfirmBtn" type="button" class="btn-preset-confirm" title="Conferma salvataggio"><i class="fa-solid fa-check"></i></button>
+                        <button id="presetCancelBtn" type="button" class="btn-preset-cancel" title="Annulla"><i class="fa-solid fa-xmark"></i></button>
+                    </div>
+                    <div id="presetErrorMsg" class="preset-error-msg" style="display: none;"></div>
+
                     <div id="presetsList" class="presets-list">
                         <!-- Generati dinamicamente da app.js -->
                     </div>
